@@ -1,0 +1,122 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Jost:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-cormorant: 'Cormorant Garamond', Georgia, serif;
+  --font-jost: 'Jost', system-ui, sans-serif;
+
+  --cream-50: #FDFAF5;
+  --cream-100: #FAF4E8;
+  --cream-200: #F5E8D0;
+  --gold-200: #E8C96A;
+  --gold-300: #D4A92A;
+  --gold-400: #B8891A;
+  --charcoal: #2A2420;
+  --charcoal-light: #4A3F38;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-jost);
+  background-color: var(--cream-50);
+  color: var(--charcoal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-cormorant);
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-charcoal-900 text-cream-50 px-8 py-3 text-sm tracking-widest uppercase font-sans font-medium transition-all duration-300 hover:bg-gold-300 hover:text-charcoal-900;
+  }
+
+  .btn-outline {
+    @apply border border-charcoal-900 text-charcoal-900 px-8 py-3 text-sm tracking-widest uppercase font-sans font-medium transition-all duration-300 hover:bg-charcoal-900 hover:text-cream-50;
+  }
+
+  .section-title {
+    @apply font-serif text-4xl md:text-5xl text-charcoal-900 font-light tracking-wide;
+  }
+
+  .product-card {
+    @apply bg-white cursor-pointer transition-all duration-500 hover:shadow-xl;
+  }
+
+  .gold-divider {
+    @apply w-16 h-px bg-gold-300 mx-auto my-4;
+  }
+
+  .input-field {
+    @apply w-full border border-cream-200 bg-white px-4 py-3 text-sm font-sans text-charcoal-900 placeholder-charcoal-800/40 focus:outline-none focus:border-gold-300 transition-colors duration-200;
+  }
+
+  .badge-sale {
+    @apply absolute top-3 left-3 bg-gold-300 text-white text-xs px-2 py-1 font-sans tracking-wider;
+  }
+
+  .badge-out-of-stock {
+    @apply absolute top-3 left-3 bg-charcoal-800 text-cream-50 text-xs px-2 py-1 font-sans tracking-wider;
+  }
+}
+
+/* Grain texture overlay */
+.grain-overlay {
+  position: relative;
+}
+.grain-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.5;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--cream-100);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--gold-300);
+}
+
+/* Shimmer loading */
+.skeleton {
+  background: linear-gradient(90deg, #f0e8d8 25%, #faf4e8 50%, #f0e8d8 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Page transitions */
+.page-enter {
+  animation: fadeUp 0.5s ease forwards;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}

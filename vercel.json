@@ -1,0 +1,15 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "next build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
+  "env": [
+    "GOOGLE_SHEETS_CLIENT_EMAIL",
+    "GOOGLE_SHEETS_PRIVATE_KEY",
+    "GOOGLE_SHEET_ID",
+    "RAZORPAY_KEY_ID",
+    "RAZORPAY_KEY_SECRET",
+    "NEXT_PUBLIC_RAZORPAY_KEY_ID",
+    "ADMIN_SECRET"
+  ]
+}
