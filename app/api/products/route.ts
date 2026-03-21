@@ -1,8 +1,9 @@
 // app/api/products/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { getProducts, getFeaturedProducts } from '@/lib/sheets';
+import { getProducts } from '@/lib/sheets';
 
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(request: NextRequest) {
   try {

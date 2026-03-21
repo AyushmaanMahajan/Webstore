@@ -1,5 +1,6 @@
 'use client';
 // app/order-tracking/page.tsx
+import { Suspense } from 'react';
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Search, Package, CheckCircle, Truck, MapPin, Clock, CreditCard, Banknote } from 'lucide-react';
@@ -14,7 +15,7 @@ const STATUS_STEPS = [
 
 const STATUS_ORDER = ['new', 'processing', 'shipped', 'delivered'];
 
-export default function OrderTrackingPage() {
+function OrderTrackingContent() {
   const searchParams = useSearchParams();
   const [orderId, setOrderId] = useState(searchParams.get('id') || '');
   const [email, setEmail] = useState('');
@@ -56,7 +57,6 @@ export default function OrderTrackingPage() {
   const currentStatusIndex = order ? STATUS_ORDER.indexOf(order.order_status) : -1;
   const isPaid = order?.payment_status === 'paid';
   const isCOD = order?.notes?.toLowerCase().includes('cash on delivery');
-
 
   return (
     <div className="page-enter max-w-2xl mx-auto px-4 sm:px-6 py-10 md:py-16">
@@ -222,5 +222,20 @@ export default function OrderTrackingPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function OrderTrackingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-[80vh] flex items-center justify-center">
+        <div
+          className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin"
+          style={{ borderColor: 'var(--violet)', borderTopColor: 'transparent' }}
+        />
+      </div>
+    }>
+      <OrderTrackingContent />
+    </Suspense>
   );
 }
