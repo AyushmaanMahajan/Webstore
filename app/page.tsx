@@ -1,17 +1,24 @@
-// app/page.tsx
 import Image from 'next/image';
 import Link from 'next/link';
-import { getProducts, getSettings } from '@/lib/sheets';
+import {
+  ArrowRight,
+  Instagram,
+  RotateCcw,
+  ShieldCheck,
+  Sparkles,
+  Truck,
+} from 'lucide-react';
 import { ProductCard } from '@/components/shop/ProductCard';
-import { Instagram, ArrowRight } from 'lucide-react';
+import { NewsletterSection } from '@/components/shop/NewsletterSection';
+import { getProducts, getSettings } from '@/lib/sheets';
 
 export const revalidate = 60;
 
 const CATEGORIES = [
-  { name: 'Necklaces', slug: 'Necklace', emoji: '📿' },
-  { name: 'Earrings', slug: 'Earring', emoji: '✨' },
-  { name: 'Rings', slug: 'Ring', emoji: '💍' },
-  { name: 'Bracelets', slug: 'Bracelet', emoji: '🌟' },
+  { name: 'Necklaces', slug: 'Necklace', mark: 'N' },
+  { name: 'Earrings',  slug: 'Earring',  mark: 'E' },
+  { name: 'Rings',     slug: 'Ring',     mark: 'R' },
+  { name: 'Bracelets', slug: 'Bracelet', mark: 'B' },
 ];
 
 export default async function HomePage() {
@@ -28,83 +35,75 @@ export default async function HomePage() {
     })),
   ]);
 
-  const featured = products.filter((p) => p.featured).slice(0, 8);
+  const featured    = products.filter((p) => p.featured).slice(0, 8);
   const newArrivals = products.slice(0, 4);
 
   return (
     <div className="page-enter">
-      {/* ── HERO ─────────────────────────────────────── */}
-      <section className="relative min-h-[90vh] flex items-center overflow-hidden bg-cream-100">
-        {settings.hero_image_url ? (
-          <Image
-            src={settings.hero_image_url}
-            alt="Hero"
-            fill
-            priority
-            className="object-cover object-center"
-          />
-        ) : (
-          /* Decorative placeholder hero */
-          <div className="absolute inset-0 bg-gradient-to-br from-cream-200 via-cream-100 to-blush">
-            <div className="absolute inset-0 opacity-20"
-              style={{
-                backgroundImage: `radial-gradient(circle at 30% 50%, #D4A92A 0%, transparent 60%),
-                                  radial-gradient(circle at 70% 20%, #E8C96A 0%, transparent 50%)`,
-              }}
-            />
-            {/* Decorative rings */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full border border-gold-200/30" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] rounded-full border border-gold-200/20" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full border border-gold-200/40" />
-          </div>
+
+      {/* ── HERO ─────────────────────────────────────────────────────────── */}
+      <section className="relative flex min-h-[95vh] items-center overflow-hidden">
+        {settings.hero_image_url && (
+          <Image src={settings.hero_image_url} alt="Hero" fill priority
+            className="object-cover object-center opacity-30" />
         )}
 
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-charcoal-900/30" />
+        {/* Ambient orbs */}
+        <div className="pointer-events-none absolute left-1/4 top-1/4 h-96 w-96 rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(155,111,212,0.28) 0%, transparent 70%)', filter: 'blur(40px)' }} />
+        <div className="pointer-events-none absolute bottom-1/4 right-1/4 h-80 w-80 rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(196,127,168,0.20) 0%, transparent 70%)', filter: 'blur(40px)' }} />
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+          style={{ border: '1px solid rgba(155,111,212,0.14)' }} />
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+          style={{ border: '1px solid rgba(196,127,168,0.10)' }} />
 
-        {/* Content */}
-        <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 py-24">
+        <div className="relative z-10 mx-auto max-w-7xl px-6 py-24 lg:px-8">
           <div className="max-w-2xl">
-            <p className="text-gold-200 text-xs tracking-[0.3em] uppercase font-sans mb-6 animate-fade-in">
-              ✦ New Collection 2026
-            </p>
-            <h1 className="font-serif text-5xl md:text-7xl font-light leading-tight text-cream-50 mb-6"
-              style={{ animationDelay: '0.1s' }}>
+            <div className="mb-8 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-body font-medium tracking-widest uppercase"
+              style={{ background: 'rgba(155,111,212,0.15)', border: '1px solid rgba(155,111,212,0.3)', color: '#D4C8E8' }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#9B6FD4', display: 'inline-block' }} />
+              New Collection 2026
+            </div>
+
+            <h1 className="mb-6 font-display font-semibold leading-tight"
+              style={{ fontSize: 'clamp(2.8rem, 7vw, 5.5rem)', color: 'var(--text-primary)' }}>
               {settings.hero_heading || 'Jewellery that tells your story'}
             </h1>
-            <p className="font-sans text-cream-200/80 text-lg mb-10 leading-relaxed font-light">
-              {settings.tagline}
+
+            <p className="mb-10 text-lg font-body leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+              {settings.tagline || 'Handcrafted with love, worn with grace.'}
             </p>
+
             <div className="flex flex-wrap gap-4">
-              <Link href="/shop" className="btn-primary inline-block">
-                Explore Collection
-              </Link>
-              <Link href="/shop?featured=true" className="border border-cream-50 text-cream-50 px-8 py-3 text-sm tracking-widest uppercase font-sans hover:bg-cream-50 hover:text-charcoal-900 transition-all duration-300 inline-block">
-                Featured Pieces
-              </Link>
+              <Link href="/shop" className="btn-primary">Explore Collection</Link>
+              <Link href="/shop?featured=true" className="btn-outline">Featured Pieces</Link>
             </div>
           </div>
         </div>
 
-        {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-cream-50/60">
-          <span className="text-[10px] tracking-widest uppercase font-sans">Scroll</span>
-          <div className="w-px h-12 bg-cream-50/30 animate-pulse" />
+        <div className="absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2"
+          style={{ color: 'var(--text-muted)' }}>
+          <span className="text-[10px] font-body tracking-widest uppercase">Scroll</span>
+          <div className="h-10 w-px animate-pulse"
+            style={{ background: 'linear-gradient(to bottom, rgba(155,111,212,0.6), transparent)' }} />
         </div>
       </section>
 
-      {/* ── USP BAR ──────────────────────────────────── */}
-      <section className="bg-charcoal-900 text-cream-100 py-5">
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+      {/* ── USP BAR ──────────────────────────────────────────────────────── */}
+      <section className="py-5"
+        style={{ background: 'rgba(155,111,212,0.07)', borderTop: '1px solid rgba(155,111,212,0.15)', borderBottom: '1px solid rgba(155,111,212,0.15)' }}>
+        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-4 px-6 text-center md:grid-cols-4">
           {[
-            { icon: '✦', text: 'Handcrafted' },
-            { icon: '🚚', text: 'Free Shipping ₹999+' },
-            { icon: '↩', text: '7-Day Returns' },
-            { icon: '🔒', text: 'Secure Payments' },
+            { icon: Sparkles,    text: 'Handcrafted' },
+            { icon: Truck,       text: 'Free Shipping INR 999+' },
+            { icon: RotateCcw,   text: '7-Day Returns' },
+            { icon: ShieldCheck, text: 'Secure Payments' },
           ].map((item) => (
             <div key={item.text} className="flex items-center justify-center gap-2">
-              <span className="text-gold-200 text-sm">{item.icon}</span>
-              <span className="text-xs tracking-widest uppercase font-sans text-cream-200/70">
+              <item.icon size={14} style={{ color: 'var(--violet-bright)' }} />
+              <span className="text-xs font-body font-medium tracking-widest uppercase"
+                style={{ color: 'var(--text-secondary)' }}>
                 {item.text}
               </span>
             </div>
@@ -112,63 +111,59 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── FEATURED JEWELLERY ───────────────────────── */}
+      {/* ── FEATURED COLLECTION ──────────────────────────────────────────── */}
       {featured.length > 0 && (
-        <section className="py-20 md:py-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <p className="text-gold-400 text-xs tracking-[0.3em] uppercase font-sans mb-3">
+        <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 md:py-28 lg:px-8">
+          <div className="mb-14 text-center">
+            <p className="mb-3 text-xs font-body tracking-[0.3em] uppercase" style={{ color: 'var(--violet-bright)' }}>
               Curated for you
             </p>
             <h2 className="section-title">Featured Collection</h2>
             <div className="gold-divider" />
           </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-4">
             {featured.map((product, idx) => (
               <ProductCard key={product.product_id} product={product} priority={idx < 4} />
             ))}
           </div>
-
-          <div className="text-center mt-12">
-            <Link href="/shop" className="btn-outline inline-flex items-center gap-3">
-              View All Pieces
-              <ArrowRight size={14} />
+          <div className="mt-12 text-center">
+            <Link href="/shop" className="btn-outline inline-flex items-center gap-2">
+              View All Pieces <ArrowRight size={14} />
             </Link>
           </div>
         </section>
       )}
 
-      {/* ── SHOP BY CATEGORY ─────────────────────────── */}
-      <section className="py-20 bg-cream-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <p className="text-gold-400 text-xs tracking-[0.3em] uppercase font-sans mb-3">
+      {/* ── SHOP BY CATEGORY ─────────────────────────────────────────────── */}
+      <section className="py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-14 text-center">
+            <p className="mb-3 text-xs font-body tracking-[0.3em] uppercase" style={{ color: 'var(--violet-bright)' }}>
               Browse
             </p>
             <h2 className="section-title">Shop by Category</h2>
             <div className="gold-divider" />
           </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {CATEGORIES.map((cat) => {
               const count = products.filter(
                 (p) => p.category.toLowerCase() === cat.slug.toLowerCase()
               ).length;
               return (
-                <Link
-                  key={cat.slug}
-                  href={`/shop?category=${cat.slug}`}
-                  className="group relative aspect-square bg-cream-200 overflow-hidden flex items-end p-6 hover:shadow-lg transition-shadow duration-300"
-                >
-                  <div className="absolute inset-0 bg-charcoal-900/0 group-hover:bg-charcoal-900/20 transition-colors duration-300" />
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-5xl opacity-20 group-hover:opacity-30 transition-opacity">
-                    {cat.emoji}
+                <Link key={cat.slug} href={`/shop?category=${cat.slug}`}
+                  className="glass-card-hover group relative flex aspect-square items-end overflow-hidden p-6">
+                  <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                    style={{ background: 'linear-gradient(135deg, rgba(155,111,212,0.22), rgba(196,127,168,0.14))' }} />
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-6xl opacity-10 transition-opacity group-hover:opacity-20"
+                    style={{ color: 'var(--text-primary)' }}>
+                    {cat.mark}
                   </div>
                   <div className="relative z-10">
-                    <h3 className="font-serif text-2xl font-light text-charcoal-900 group-hover:text-gold-400 transition-colors">
+                    <h3 className="font-display text-2xl font-normal transition-colors group-hover:text-violet-bright"
+                      style={{ color: 'var(--text-primary)' }}>
                       {cat.name}
                     </h3>
-                    <p className="font-sans text-xs text-charcoal-800/50 mt-1">
+                    <p className="mt-1 text-xs font-body" style={{ color: 'var(--text-muted)' }}>
                       {count} {count === 1 ? 'piece' : 'pieces'}
                     </p>
                   </div>
@@ -179,18 +174,17 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── NEW ARRIVALS ──────────────────────────────── */}
+      {/* ── NEW ARRIVALS ─────────────────────────────────────────────────── */}
       {newArrivals.length > 0 && (
-        <section className="py-20 md:py-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <p className="text-gold-400 text-xs tracking-[0.3em] uppercase font-sans mb-3">
+        <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 md:py-28 lg:px-8">
+          <div className="mb-14 text-center">
+            <p className="mb-3 text-xs font-body tracking-[0.3em] uppercase" style={{ color: 'var(--violet-bright)' }}>
               Just landed
             </p>
             <h2 className="section-title">New Arrivals</h2>
             <div className="gold-divider" />
           </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
             {newArrivals.map((product) => (
               <ProductCard key={product.product_id} product={product} />
             ))}
@@ -198,51 +192,29 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ── INSTAGRAM / BRAND ─────────────────────────── */}
-      <section className="py-20 bg-charcoal-900 text-cream-100">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <Instagram size={28} className="text-gold-200 mx-auto mb-4 opacity-70" />
-          <h2 className="font-serif text-4xl font-light text-cream-50 mb-3">
+      {/* ── INSTAGRAM ────────────────────────────────────────────────────── */}
+      <section className="py-20" style={{ background: 'var(--navy)', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <div className="mx-auto max-w-7xl px-6 text-center">
+          <div className="glass-card mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
+            <Instagram size={24} style={{ color: 'var(--violet-bright)' }} />
+          </div>
+          <h2 className="mb-3 font-display text-4xl font-semibold" style={{ color: 'var(--text-primary)' }}>
             Follow Our Journey
           </h2>
-          <p className="text-cream-200/50 font-sans text-sm mb-8">
-            Tag us to be featured · Handcrafted stories every day
+          <p className="mb-8 text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
+            Tag us to be featured and discover handcrafted stories every day.
           </p>
-          {settings.instagram_url && settings.instagram_url !== '#' ? (
-            <a
-              href={settings.instagram_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-3 border border-gold-300/40 text-gold-200 px-8 py-3 text-sm tracking-widest uppercase font-sans hover:bg-gold-300/10 transition-colors"
-            >
-              <Instagram size={14} />
-              Follow on Instagram
+          {settings.instagram_url && settings.instagram_url !== '#' && (
+            <a href={settings.instagram_url} target="_blank" rel="noopener noreferrer" className="btn-outline inline-flex items-center gap-2">
+              <Instagram size={14} /> Follow on Instagram
             </a>
-          ) : null}
+          )}
         </div>
       </section>
 
-      {/* ── NEWSLETTER TEASER ─────────────────────────── */}
-      <section className="py-16 bg-cream-200">
-        <div className="max-w-xl mx-auto px-6 text-center">
-          <h2 className="font-serif text-3xl font-light text-charcoal-900 mb-3">
-            Jewellery Stories in Your Inbox
-          </h2>
-          <p className="font-sans text-sm text-charcoal-800/60 mb-6">
-            New arrivals, styling tips, and exclusive offers.
-          </p>
-          <div className="flex gap-0">
-            <input
-              type="email"
-              placeholder="Your email address"
-              className="flex-1 px-4 py-3 border border-cream-300 bg-white text-sm font-sans focus:outline-none focus:border-gold-300"
-            />
-            <button className="bg-charcoal-900 text-cream-50 px-6 py-3 text-xs tracking-widest uppercase font-sans hover:bg-gold-400 transition-colors whitespace-nowrap">
-              Subscribe
-            </button>
-          </div>
-        </div>
-      </section>
+      {/* ── NEWSLETTER — wired to Google Sheets SUBSCRIBERS tab ──────────── */}
+      <NewsletterSection />
+
     </div>
   );
 }

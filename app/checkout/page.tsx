@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '@/components/shop/CartProvider';
 import { formatPrice, isValidEmail, isValidPhone, isValidPincode } from '@/lib/utils';
 import { CheckoutFormData } from '@/types';
-import { Lock, AlertCircle } from 'lucide-react';
+import { Lock, Truck, AlertCircle, CreditCard, Banknote } from 'lucide-react';
 import Image from 'next/image';
 
 declare global {
@@ -23,11 +23,14 @@ const INDIA_STATES = [
   'Delhi', 'Jammu & Kashmir', 'Ladakh', 'Puducherry',
 ];
 
+type PaymentMethod = 'online' | 'cod';
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { cart, totalPrice, clearCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('online');
   const [form, setForm] = useState<CheckoutFormData>({
     name: '', phone: '', email: '', address: '', city: '', state: '', pincode: '',
   });
@@ -65,14 +68,45 @@ export default function CheckoutPage() {
     });
   }
 
-  async function handleCheckout() {
+  // ── COD flow ────────────────────────────────────────────────────────────────
+  async function handleCOD() {
     setError('');
     if (!validate()) return;
     if (cart.length === 0) { setError('Your bag is empty.'); return; }
 
     setLoading(true);
     try {
-      // Step 1: Create Razorpay order + validate stock
+      const res = await fetch('/api/checkout/cod', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cart, customer: form }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Could not place order. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      clearCart();
+      router.push(`/order-success?orderId=${data.orderId}`);
+    } catch (err) {
+      console.error('COD error:', err);
+      setError('Something went wrong. Please try again.');
+      setLoading(false);
+    }
+  }
+
+  // ── Online payment flow ──────────────────────────────────────────────────────
+  async function handleOnlinePayment() {
+    setError('');
+    if (!validate()) return;
+    if (cart.length === 0) { setError('Your bag is empty.'); return; }
+
+    setLoading(true);
+    try {
       const checkoutRes = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -86,7 +120,6 @@ export default function CheckoutPage() {
         return;
       }
 
-      // Step 2: Load Razorpay SDK
       const razorpayLoaded = await loadRazorpay();
       if (!razorpayLoaded) {
         setError('Payment gateway failed to load. Please check your internet connection.');
@@ -94,7 +127,6 @@ export default function CheckoutPage() {
         return;
       }
 
-      // Step 3: Open Razorpay modal
       const rzp = new window.Razorpay({
         key: checkoutData.keyId,
         amount: checkoutData.amount,
@@ -107,7 +139,7 @@ export default function CheckoutPage() {
           email: checkoutData.customer.email,
           contact: checkoutData.customer.phone,
         },
-        theme: { color: '#D4A92A' },
+        theme: { color: '#9B6FD4' },
         modal: {
           ondismiss: () => { setLoading(false); },
         },
@@ -116,7 +148,6 @@ export default function CheckoutPage() {
           razorpay_payment_id: string;
           razorpay_signature: string;
         }) => {
-          // Step 4: Verify payment and create order
           const verifyRes = await fetch('/api/checkout/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -152,13 +183,21 @@ export default function CheckoutPage() {
     }
   }
 
+  function handleSubmit() {
+    if (paymentMethod === 'cod') {
+      handleCOD();
+    } else {
+      handleOnlinePayment();
+    }
+  }
+
   if (cart.length === 0) {
     return (
       <div className="page-enter min-h-[60vh] flex flex-col items-center justify-center text-center px-4">
-        <p className="font-serif text-2xl font-light text-charcoal-900 mb-6">
+        <p className="font-display text-2xl font-light mb-6" style={{ color: 'var(--text-primary)' }}>
           Your bag is empty
         </p>
-        <a href="/shop" className="btn-primary inline-block">Go Shopping</a>
+        <a href="/shop" className="btn-primary">Go Shopping</a>
       </div>
     );
   }
@@ -171,16 +210,18 @@ export default function CheckoutPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-10 lg:gap-16">
-        {/* Form */}
+
+        {/* ── LEFT: Form ── */}
         <div className="lg:col-span-3 space-y-8">
+
           {/* Contact */}
           <div>
-            <h2 className="font-serif text-2xl font-light text-charcoal-900 mb-5">
+            <h2 className="font-display text-2xl font-light mb-5" style={{ color: 'var(--text-primary)' }}>
               Contact Information
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs tracking-widest uppercase font-sans text-charcoal-800/60 mb-2">
+                <label className="block text-xs tracking-widest uppercase font-body mb-2" style={{ color: 'var(--text-muted)' }}>
                   Full Name *
                 </label>
                 <input
@@ -191,11 +232,11 @@ export default function CheckoutPage() {
                   placeholder="Riya Sharma"
                 />
                 {fieldErrors.name && (
-                  <p className="text-red-500 text-xs font-sans mt-1">{fieldErrors.name}</p>
+                  <p className="text-xs font-body mt-1" style={{ color: '#F87171' }}>{fieldErrors.name}</p>
                 )}
               </div>
               <div>
-                <label className="block text-xs tracking-widest uppercase font-sans text-charcoal-800/60 mb-2">
+                <label className="block text-xs tracking-widest uppercase font-body mb-2" style={{ color: 'var(--text-muted)' }}>
                   Mobile Number *
                 </label>
                 <input
@@ -207,11 +248,11 @@ export default function CheckoutPage() {
                   maxLength={10}
                 />
                 {fieldErrors.phone && (
-                  <p className="text-red-500 text-xs font-sans mt-1">{fieldErrors.phone}</p>
+                  <p className="text-xs font-body mt-1" style={{ color: '#F87171' }}>{fieldErrors.phone}</p>
                 )}
               </div>
               <div className="md:col-span-2">
-                <label className="block text-xs tracking-widest uppercase font-sans text-charcoal-800/60 mb-2">
+                <label className="block text-xs tracking-widest uppercase font-body mb-2" style={{ color: 'var(--text-muted)' }}>
                   Email Address *
                 </label>
                 <input
@@ -222,20 +263,20 @@ export default function CheckoutPage() {
                   placeholder="riya@email.com"
                 />
                 {fieldErrors.email && (
-                  <p className="text-red-500 text-xs font-sans mt-1">{fieldErrors.email}</p>
+                  <p className="text-xs font-body mt-1" style={{ color: '#F87171' }}>{fieldErrors.email}</p>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Shipping address */}
+          {/* Delivery address */}
           <div>
-            <h2 className="font-serif text-2xl font-light text-charcoal-900 mb-5">
+            <h2 className="font-display text-2xl font-light mb-5" style={{ color: 'var(--text-primary)' }}>
               Delivery Address
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <label className="block text-xs tracking-widest uppercase font-sans text-charcoal-800/60 mb-2">
+                <label className="block text-xs tracking-widest uppercase font-body mb-2" style={{ color: 'var(--text-muted)' }}>
                   Street Address *
                 </label>
                 <textarea
@@ -245,11 +286,11 @@ export default function CheckoutPage() {
                   placeholder="Flat / House No., Street, Area"
                 />
                 {fieldErrors.address && (
-                  <p className="text-red-500 text-xs font-sans mt-1">{fieldErrors.address}</p>
+                  <p className="text-xs font-body mt-1" style={{ color: '#F87171' }}>{fieldErrors.address}</p>
                 )}
               </div>
               <div>
-                <label className="block text-xs tracking-widest uppercase font-sans text-charcoal-800/60 mb-2">
+                <label className="block text-xs tracking-widest uppercase font-body mb-2" style={{ color: 'var(--text-muted)' }}>
                   City *
                 </label>
                 <input
@@ -260,11 +301,11 @@ export default function CheckoutPage() {
                   placeholder="Mumbai"
                 />
                 {fieldErrors.city && (
-                  <p className="text-red-500 text-xs font-sans mt-1">{fieldErrors.city}</p>
+                  <p className="text-xs font-body mt-1" style={{ color: '#F87171' }}>{fieldErrors.city}</p>
                 )}
               </div>
               <div>
-                <label className="block text-xs tracking-widest uppercase font-sans text-charcoal-800/60 mb-2">
+                <label className="block text-xs tracking-widest uppercase font-body mb-2" style={{ color: 'var(--text-muted)' }}>
                   State *
                 </label>
                 <select
@@ -278,11 +319,11 @@ export default function CheckoutPage() {
                   ))}
                 </select>
                 {fieldErrors.state && (
-                  <p className="text-red-500 text-xs font-sans mt-1">{fieldErrors.state}</p>
+                  <p className="text-xs font-body mt-1" style={{ color: '#F87171' }}>{fieldErrors.state}</p>
                 )}
               </div>
               <div>
-                <label className="block text-xs tracking-widest uppercase font-sans text-charcoal-800/60 mb-2">
+                <label className="block text-xs tracking-widest uppercase font-body mb-2" style={{ color: 'var(--text-muted)' }}>
                   Pincode *
                 </label>
                 <input
@@ -294,79 +335,242 @@ export default function CheckoutPage() {
                   maxLength={6}
                 />
                 {fieldErrors.pincode && (
-                  <p className="text-red-500 text-xs font-sans mt-1">{fieldErrors.pincode}</p>
+                  <p className="text-xs font-body mt-1" style={{ color: '#F87171' }}>{fieldErrors.pincode}</p>
                 )}
               </div>
             </div>
           </div>
 
+          {/* ── Payment method selector ── */}
+          <div>
+            <h2 className="font-display text-2xl font-light mb-5" style={{ color: 'var(--text-primary)' }}>
+              Payment Method
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+              {/* Online payment card */}
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('online')}
+                className="text-left p-5 rounded-xl border transition-all duration-200"
+                style={{
+                  background: paymentMethod === 'online'
+                    ? 'rgba(155, 111, 212, 0.12)'
+                    : 'var(--glass)',
+                  borderColor: paymentMethod === 'online'
+                    ? 'var(--violet-bright)'
+                    : 'var(--glass-border)',
+                  boxShadow: paymentMethod === 'online'
+                    ? '0 0 0 1px var(--violet), 0 4px 20px var(--violet-glow)'
+                    : 'none',
+                }}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div
+                    className="w-9 h-9 rounded-lg flex items-center justify-center"
+                    style={{ background: 'rgba(155, 111, 212, 0.15)' }}
+                  >
+                    <CreditCard size={18} style={{ color: 'var(--violet-bright)' }} />
+                  </div>
+                  <span className="font-body font-600 text-sm" style={{ color: 'var(--text-primary)' }}>
+                    Pay Online
+                  </span>
+                  {paymentMethod === 'online' && (
+                    <span
+                      className="ml-auto text-[10px] font-600 font-body px-2 py-0.5 rounded-full"
+                      style={{ background: 'var(--violet)', color: '#fff' }}
+                    >
+                      Selected
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs font-body leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                  UPI, cards, netbanking & wallets via Razorpay
+                </p>
+              </button>
+
+              {/* COD card */}
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('cod')}
+                className="text-left p-5 rounded-xl border transition-all duration-200"
+                style={{
+                  background: paymentMethod === 'cod'
+                    ? 'rgba(196, 127, 168, 0.10)'
+                    : 'var(--glass)',
+                  borderColor: paymentMethod === 'cod'
+                    ? 'var(--rose)'
+                    : 'var(--glass-border)',
+                  boxShadow: paymentMethod === 'cod'
+                    ? '0 0 0 1px var(--rose), 0 4px 20px var(--rose-glow)'
+                    : 'none',
+                }}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div
+                    className="w-9 h-9 rounded-lg flex items-center justify-center"
+                    style={{ background: 'rgba(196, 127, 168, 0.15)' }}
+                  >
+                    <Banknote size={18} style={{ color: 'var(--rose-gold)' }} />
+                  </div>
+                  <span className="font-body font-600 text-sm" style={{ color: 'var(--text-primary)' }}>
+                    Cash on Delivery
+                  </span>
+                  {paymentMethod === 'cod' && (
+                    <span
+                      className="ml-auto text-[10px] font-600 font-body px-2 py-0.5 rounded-full"
+                      style={{ background: 'var(--rose)', color: '#fff' }}
+                    >
+                      Selected
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs font-body leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                  Pay in cash when your order arrives
+                </p>
+              </button>
+            </div>
+
+            {/* COD notice */}
+            {paymentMethod === 'cod' && (
+              <div
+                className="mt-4 flex items-start gap-3 p-4 rounded-xl"
+                style={{
+                  background: 'rgba(196, 127, 168, 0.08)',
+                  border: '1px solid rgba(196, 127, 168, 0.20)',
+                }}
+              >
+                <Truck size={16} style={{ color: 'var(--rose-gold)', flexShrink: 0, marginTop: 1 }} />
+                <p className="text-xs font-body leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                  Cash on Delivery is available across India. Please keep the exact amount ready at the time of delivery. Orders are typically delivered within 5–7 business days.
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Error */}
           {error && (
-            <div className="flex items-start gap-3 bg-red-50 border border-red-200 p-4">
-              <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
-              <p className="font-sans text-sm text-red-700">{error}</p>
+            <div
+              className="flex items-start gap-3 p-4 rounded-xl"
+              style={{
+                background: 'rgba(248, 113, 113, 0.08)',
+                border: '1px solid rgba(248, 113, 113, 0.25)',
+              }}
+            >
+              <AlertCircle size={16} style={{ color: '#F87171', flexShrink: 0, marginTop: 1 }} />
+              <p className="text-sm font-body" style={{ color: '#FCA5A5' }}>{error}</p>
             </div>
           )}
 
-          {/* Submit */}
+          {/* Submit button */}
           <button
-            onClick={handleCheckout}
+            onClick={handleSubmit}
             disabled={loading}
             className="w-full btn-primary flex items-center justify-center gap-3 py-4 disabled:opacity-60 disabled:cursor-not-allowed"
+            style={paymentMethod === 'cod' ? {
+              background: 'linear-gradient(135deg, #9B4F80, #C47FA8)',
+              boxShadow: '0 4px 24px var(--rose-glow)',
+            } : {}}
           >
-            <Lock size={14} />
-            {loading ? 'Processing…' : `Pay ${formatPrice(grandTotal)} Securely`}
+            {paymentMethod === 'cod' ? (
+              <>
+                <Truck size={16} />
+                {loading ? 'Placing Order…' : `Place Order — ${formatPrice(grandTotal)} COD`}
+              </>
+            ) : (
+              <>
+                <Lock size={16} />
+                {loading ? 'Processing…' : `Pay ${formatPrice(grandTotal)} Securely`}
+              </>
+            )}
           </button>
 
-          <p className="font-sans text-xs text-charcoal-800/40 text-center">
-            Secured by Razorpay · 256-bit SSL encryption
+          <p className="text-xs font-body text-center" style={{ color: 'var(--text-muted)' }}>
+            {paymentMethod === 'cod'
+              ? 'No payment required now · Pay cash on delivery'
+              : 'Secured by Razorpay · 256-bit SSL encryption'}
           </p>
         </div>
 
-        {/* Order summary */}
+        {/* ── RIGHT: Order summary ── */}
         <div className="lg:col-span-2">
-          <div className="bg-cream-100 p-6 sticky top-24">
-            <h2 className="font-serif text-xl font-light text-charcoal-900 mb-5">
+          <div
+            className="glass-card p-6 sticky top-24"
+          >
+            <h2 className="font-display text-xl font-light mb-5" style={{ color: 'var(--text-primary)' }}>
               Order Summary
             </h2>
 
             <div className="space-y-4 mb-6">
               {cart.map((item) => (
                 <div key={item.product_id} className="flex gap-3">
-                  <div className="relative w-14 h-14 bg-cream-200 shrink-0 overflow-hidden">
+                  <div
+                    className="relative w-14 h-14 shrink-0 overflow-hidden rounded-lg"
+                    style={{ background: 'var(--navy-light)' }}
+                  >
                     {item.image_url_1 && (
-                      <Image src={item.image_url_1} alt={item.name} fill className="object-cover" sizes="56px" />
+                      <Image
+                        src={item.image_url_1}
+                        alt={item.name}
+                        fill
+                        className="object-cover"
+                        sizes="56px"
+                      />
                     )}
-                    <span className="absolute -top-1 -right-1 bg-charcoal-900 text-cream-50 text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-sans">
+                    <span
+                      className="absolute -top-1 -right-1 text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-body font-600"
+                      style={{ background: 'var(--violet)', color: '#fff' }}
+                    >
                       {item.quantity}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-sans text-xs text-charcoal-900 leading-snug">{item.name}</p>
-                    <p className="font-sans text-xs text-charcoal-800/50 mt-1">
+                    <p className="text-xs font-body leading-snug" style={{ color: 'var(--text-primary)' }}>
+                      {item.name}
+                    </p>
+                    <p className="text-xs font-body mt-1" style={{ color: 'var(--text-muted)' }}>
                       {formatPrice(item.price)} × {item.quantity}
                     </p>
                   </div>
-                  <p className="font-sans text-xs font-medium text-charcoal-900 shrink-0">
+                  <p className="text-xs font-body font-600 shrink-0" style={{ color: 'var(--text-primary)' }}>
                     {formatPrice(item.price * item.quantity)}
                   </p>
                 </div>
               ))}
             </div>
 
-            <div className="border-t border-cream-200 pt-4 space-y-2">
-              <div className="flex justify-between text-sm font-sans">
-                <span className="text-charcoal-800/60">Subtotal</span>
-                <span>{formatPrice(totalPrice)}</span>
+            <div
+              className="pt-4 space-y-2"
+              style={{ borderTop: '1px solid var(--glass-border)' }}
+            >
+              <div className="flex justify-between text-sm font-body">
+                <span style={{ color: 'var(--text-secondary)' }}>Subtotal</span>
+                <span style={{ color: 'var(--text-primary)' }}>{formatPrice(totalPrice)}</span>
               </div>
-              <div className="flex justify-between text-sm font-sans">
-                <span className="text-charcoal-800/60">Shipping</span>
-                <span>{shipping === 0 ? 'Free' : formatPrice(shipping)}</span>
+              <div className="flex justify-between text-sm font-body">
+                <span style={{ color: 'var(--text-secondary)' }}>Shipping</span>
+                <span style={{ color: 'var(--text-primary)' }}>
+                  {shipping === 0 ? 'Free' : formatPrice(shipping)}
+                </span>
               </div>
-              <div className="border-t border-cream-200 pt-3 flex justify-between font-sans font-medium">
-                <span>Total</span>
-                <span>{formatPrice(grandTotal)}</span>
+              <div className="flex justify-between text-sm font-body">
+                <span style={{ color: 'var(--text-secondary)' }}>Payment</span>
+                <span style={{ color: paymentMethod === 'cod' ? 'var(--rose-gold)' : 'var(--violet-bright)' }}>
+                  {paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online'}
+                </span>
               </div>
+              <div
+                className="pt-3 flex justify-between font-body font-600"
+                style={{ borderTop: '1px solid var(--glass-border)' }}
+              >
+                <span style={{ color: 'var(--text-primary)' }}>Total</span>
+                <span style={{ color: 'var(--text-primary)' }}>{formatPrice(grandTotal)}</span>
+              </div>
+              {paymentMethod === 'cod' && (
+                <p className="text-[11px] font-body pt-1" style={{ color: 'var(--text-muted)' }}>
+                  Amount due at delivery: {formatPrice(grandTotal)}
+                </p>
+              )}
             </div>
           </div>
         </div>

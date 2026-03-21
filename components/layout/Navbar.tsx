@@ -1,118 +1,122 @@
 'use client';
-// components/layout/Navbar.tsx
-import { useState, useEffect } from 'react';
+
+import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingBag, Menu, X } from 'lucide-react';
+import { Menu, ShoppingBag, X } from 'lucide-react';
 import { useCart } from '@/components/shop/CartProvider';
-import { BrandMonogram, getStoreWordmark } from '@/components/layout/BrandMonogram';
 import { cn } from '@/lib/utils';
 
 interface NavbarProps {
   storeName: string;
+  logoUrl?: string;
 }
 
 const NAV_LINKS = [
-  { href: '/shop', label: 'Shop' },
+  { href: '/shop', label: 'Shop All' },
   { href: '/shop?category=Necklace', label: 'Necklaces' },
-  { href: '/shop?category=Earrings', label: 'Earrings' },
-  { href: '/shop?category=Rings', label: 'Rings' },
+  { href: '/shop?category=Earring', label: 'Earrings' },
+  { href: '/shop?category=Ring', label: 'Rings' },
   { href: '/shop?category=Bracelet', label: 'Bracelets' },
 ];
 
-export function Navbar({ storeName }: NavbarProps) {
+export function Navbar({ storeName, logoUrl }: NavbarProps) {
   const { totalItems } = useCart();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const wordmark = getStoreWordmark(storeName);
 
   useEffect(() => {
-    const handler = () => setScrolled(window.scrollY > 40);
+    const handler = () => setScrolled(window.scrollY > 30);
     window.addEventListener('scroll', handler, { passive: true });
     return () => window.removeEventListener('scroll', handler);
   }, []);
 
   return (
     <>
-      {/* Announcement Bar */}
-      <div className="bg-charcoal-900 text-cream-100 text-center py-2 text-xs tracking-widest uppercase font-sans">
-        Free shipping on orders above ₹999 · Handcrafted with love
+      <div
+        style={{
+          background: 'linear-gradient(90deg, #4A2878, #C47FA8, #4A2878)',
+          backgroundSize: '200% 100%',
+        }}
+        className="py-2 text-center text-xs font-body font-medium tracking-widest text-white"
+      >
+        Free shipping on orders above INR 999+ | Handcrafted with love
       </div>
 
       <header
         className={cn(
           'sticky top-0 z-50 transition-all duration-300',
           scrolled
-            ? 'bg-cream-50/95 backdrop-blur-md shadow-sm border-b border-cream-200'
-            : 'bg-cream-50 border-b border-cream-200'
+            ? 'border-b border-white/[0.08] bg-midnight/80 shadow-lg backdrop-blur-xl'
+            : 'bg-transparent'
         )}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 md:h-20">
-            {/* Mobile menu toggle */}
+          <div className="flex h-16 items-center justify-between md:h-20">
+
             <button
-              className="md:hidden p-2 text-charcoal-900"
+              className="p-2 text-white/70 transition-colors hover:text-white md:hidden"
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label="Toggle menu"
             >
               {mobileOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
 
-            {/* Nav links - desktop */}
-            <nav className="hidden md:flex items-center gap-8">
-              {NAV_LINKS.slice(0, 3).map((link) => (
+            <nav className="hidden items-center gap-8 md:flex">
+              {NAV_LINKS.slice(0, 2).map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="text-xs tracking-widest uppercase font-sans text-charcoal-800 hover:text-gold-400 transition-colors duration-200"
+                  className="text-xs font-body font-medium tracking-widest uppercase text-white/60 transition-colors duration-200 hover:text-white"
                 >
                   {link.label}
                 </Link>
               ))}
             </nav>
 
-            {/* Logo / Brand */}
             <Link
               href="/"
-              aria-label={storeName}
-              className="absolute left-1/2 -translate-x-1/2 flex items-center"
+              aria-label={storeName || 'Home'}
+              className="absolute left-1/2 -translate-x-1/2"
             >
-              <div className="flex items-center gap-2 lg:gap-3">
-                <BrandMonogram storeName={storeName} size="md" />
-                <div className="hidden lg:flex flex-col leading-none">
-                  <span className="font-serif text-xl font-light tracking-[0.18em] uppercase text-charcoal-900">
-                    {wordmark.primary}
-                  </span>
-                  <span className="mt-1 text-[9px] font-sans uppercase tracking-[0.42em] text-charcoal-800/65">
-                    {wordmark.secondary || 'Fine Jewellery'}
-                  </span>
-                </div>
-              </div>
+              <Image
+                src="/logo.svg"
+                alt={storeName}
+                width={48}
+                height={48}
+                className="h-12 w-12 object-contain"
+                priority
+              />
             </Link>
 
-            {/* Right nav */}
-            <div className="flex items-center gap-4">
-              <nav className="hidden md:flex items-center gap-8">
-                {NAV_LINKS.slice(3).map((link) => (
+            <div className="flex items-center gap-8">
+              <nav className="hidden items-center gap-8 md:flex">
+                {NAV_LINKS.slice(2).map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="text-xs tracking-widest uppercase font-sans text-charcoal-800 hover:text-gold-400 transition-colors duration-200"
+                    className="text-xs font-body tracking-widest uppercase text-white/60 transition-colors duration-200 hover:text-white"
                   >
                     {link.label}
                   </Link>
                 ))}
               </nav>
 
-              {/* Cart icon */}
               <Link
                 href="/cart"
-                className="relative p-2 text-charcoal-900 hover:text-gold-400 transition-colors"
+                className="relative p-2 text-white/70 transition-colors hover:text-white"
                 aria-label="Cart"
               >
                 <ShoppingBag size={20} />
                 {totalItems > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 bg-gold-300 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-sans font-medium">
-                    {totalItems > 9 ? '9+' : totalItems}
+                  <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white">
+                    <span
+                      className="absolute inset-0 rounded-full"
+                      style={{ background: 'linear-gradient(135deg, #9B6FD4, #C47FA8)' }}
+                    />
+                    <span className="relative z-10">
+                      {totalItems > 9 ? '9+' : totalItems}
+                    </span>
                   </span>
                 )}
               </Link>
@@ -120,15 +124,14 @@ export function Navbar({ storeName }: NavbarProps) {
           </div>
         </div>
 
-        {/* Mobile menu */}
         {mobileOpen && (
-          <div className="md:hidden bg-cream-50 border-t border-cream-200 px-6 py-6">
+          <div className="border-t border-white/[0.08] bg-midnight/95 px-6 py-6 backdrop-blur-xl md:hidden">
             <nav className="flex flex-col gap-5">
               {NAV_LINKS.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="text-sm tracking-widest uppercase font-sans text-charcoal-800"
+                  className="text-sm font-body tracking-widest uppercase text-white/70 transition-colors hover:text-white"
                   onClick={() => setMobileOpen(false)}
                 >
                   {link.label}

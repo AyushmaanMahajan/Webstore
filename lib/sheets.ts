@@ -3,7 +3,12 @@ import { google } from 'googleapis';
 import type { Product, Order, InventoryLog, StoreSettings } from '@/types';
 import { toDriveImageUrl } from '@/lib/utils';
 
-function getAuth() {
+// ── Singleton Sheets client ───────────────────────────────────────────────────
+let sheetsClientInstance: ReturnType<typeof google.sheets> | null = null;
+
+function getSheetsClient() {
+  if (sheetsClientInstance) return sheetsClientInstance;
+
   const privateKey = process.env.GOOGLE_SHEETS_PRIVATE_KEY?.replace(/\\n/g, '\n');
   const clientEmail = process.env.GOOGLE_SHEETS_CLIENT_EMAIL;
 
@@ -11,34 +16,52 @@ function getAuth() {
     throw new Error('Missing Google Sheets credentials in environment variables.');
   }
 
-  return new google.auth.JWT({
+  const auth = new google.auth.JWT({
     email: clientEmail,
     key: privateKey,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
-}
 
-function getSheetsClient() {
-  const auth = getAuth();
-  return google.sheets({ version: 'v4', auth });
+  sheetsClientInstance = google.sheets({ version: 'v4', auth });
+  return sheetsClientInstance;
 }
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID!;
 
-// ─── PRODUCTS ──────────────────────────────────────────────────────────────────
+// ── In-memory cache (60s TTL) ─────────────────────────────────────────────────
+interface CacheEntry<T> { data: T; expiresAt: number; }
+const cache = new Map<string, CacheEntry<unknown>>();
+const CACHE_TTL = 60_000;
+
+function getCache<T>(key: string): T | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) { cache.delete(key); return null; }
+  return entry.data as T;
+}
+function setCache<T>(key: string, data: T): void {
+  cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL });
+}
+function invalidateCache(key: string): void { cache.delete(key); }
+
+// ─── PRODUCTS ────────────────────────────────────────────────────────────────
 
 export async function getProducts(): Promise<Product[]> {
+  const cached = getCache<Product[]>('products');
+  if (cached) return cached;
+
   try {
     const sheets = getSheetsClient();
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
       range: 'PRODUCTS!A2:L',
     });
-
     const rows = response.data.values || [];
-    return rows
+    const products = rows
       .map(rowToProduct)
       .filter((p): p is Product => p !== null && p.status === 'active');
+    setCache('products', products);
+    return products;
   } catch (error) {
     console.error('getProducts error:', error);
     throw new Error('Failed to fetch products from Google Sheets.');
@@ -89,7 +112,7 @@ function rowToProduct(row: string[]): Product | null {
   };
 }
 
-// ─── ORDERS ────────────────────────────────────────────────────────────────────
+// ─── ORDERS ──────────────────────────────────────────────────────────────────
 
 export interface CreateOrderParams {
   order_id: string;
@@ -101,6 +124,8 @@ export interface CreateOrderParams {
   product_name: string;
   quantity: number;
   total_price: number;
+  payment_status?: 'paid' | 'pending';
+  notes?: string;
 }
 
 export async function createOrder(params: CreateOrderParams): Promise<void> {
@@ -113,24 +138,22 @@ export async function createOrder(params: CreateOrderParams): Promise<void> {
       range: 'ORDERS!A:N',
       valueInputOption: 'USER_ENTERED',
       requestBody: {
-        values: [
-          [
-            params.order_id,
-            date,
-            params.customer_name,
-            params.phone,
-            params.email,
-            params.address,
-            params.product_id,
-            params.product_name,
-            params.quantity,
-            params.total_price,
-            'paid',
-            'new',
-            '',
-            '',
-          ],
-        ],
+        values: [[
+          params.order_id,
+          date,
+          params.customer_name,
+          params.phone,
+          params.email,
+          params.address,
+          params.product_id,
+          params.product_name,
+          params.quantity,
+          params.total_price,
+          params.payment_status ?? 'paid',
+          'new',
+          '',
+          params.notes ?? '',
+        ]],
       },
     });
   } catch (error) {
@@ -145,34 +168,68 @@ export async function getOrders(): Promise<Order[]> {
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
       range: 'ORDERS!A2:N',
+      valueRenderOption: 'UNFORMATTED_VALUE',
     });
-
     const rows = response.data.values || [];
-    return rows.map((row) => ({
-      order_id: row[0] || '',
-      date: row[1] || '',
-      customer_name: row[2] || '',
-      phone: row[3] || '',
-      email: row[4] || '',
-      address: row[5] || '',
-      product_id: row[6] || '',
-      product_name: row[7] || '',
-      quantity: parseInt(row[8]) || 0,
-      total_price: parseFloat(row[9]) || 0,
-      payment_status: (row[10] as 'pending' | 'paid') || 'pending',
-      order_status: (row[11] as Order['order_status']) || 'new',
-      tracking_number: row[12] || '',
-      notes: row[13] || '',
-    }));
+    return rows
+      .filter((row) => row[0])
+      .map((row) => ({
+        order_id:        String(row[0] ?? '').trim(),
+        date:            String(row[1] ?? '').trim(),
+        customer_name:   String(row[2] ?? '').trim(),
+        phone:           String(row[3] ?? '').trim(),
+        email:           String(row[4] ?? '').trim(),
+        address:         String(row[5] ?? '').trim(),
+        product_id:      String(row[6] ?? '').trim(),
+        product_name:    String(row[7] ?? '').trim(),
+        quantity:        parseInt(String(row[8] ?? '0')) || 0,
+        total_price:     parseFloat(String(row[9] ?? '0')) || 0,
+        payment_status:  (String(row[10] ?? '').toLowerCase().trim() as 'pending' | 'paid') || 'pending',
+        order_status:    (String(row[11] ?? '').toLowerCase().trim() as Order['order_status']) || 'new',
+        tracking_number: String(row[12] ?? '').trim(),
+        notes:           String(row[13] ?? '').trim(),
+      }));
   } catch (error) {
     console.error('getOrders error:', error);
     throw new Error('Failed to fetch orders.');
   }
 }
 
+// Fetches directly from Sheets every time — never cached.
+// Orders change status/payment frequently so we always want fresh data.
 export async function getOrderById(orderId: string): Promise<Order | null> {
-  const orders = await getOrders();
-  return orders.find((o) => o.order_id === orderId) || null;
+  try {
+    const sheets = getSheetsClient();
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: 'ORDERS!A2:N',
+      valueRenderOption: 'UNFORMATTED_VALUE',
+    });
+
+    const rows = response.data.values || [];
+    const row = rows.find((r) => String(r[0] ?? '').trim() === orderId.trim());
+    if (!row) return null;
+
+    return {
+      order_id:        String(row[0] ?? '').trim(),
+      date:            String(row[1] ?? '').trim(),
+      customer_name:   String(row[2] ?? '').trim(),
+      phone:           String(row[3] ?? '').trim(),
+      email:           String(row[4] ?? '').trim(),
+      address:         String(row[5] ?? '').trim(),
+      product_id:      String(row[6] ?? '').trim(),
+      product_name:    String(row[7] ?? '').trim(),
+      quantity:        parseInt(String(row[8] ?? '0')) || 0,
+      total_price:     parseFloat(String(row[9] ?? '0')) || 0,
+      payment_status:  (String(row[10] ?? '').toLowerCase().trim() as 'pending' | 'paid') || 'pending',
+      order_status:    (String(row[11] ?? '').toLowerCase().trim() as Order['order_status']) || 'new',
+      tracking_number: String(row[12] ?? '').trim(),
+      notes:           String(row[13] ?? '').trim(),
+    };
+  } catch (error) {
+    console.error('getOrderById error:', error);
+    return null;
+  }
 }
 
 export async function updateOrderStatus(
@@ -185,16 +242,13 @@ export async function updateOrderStatus(
     const orders = await getOrders();
     const rowIndex = orders.findIndex((o) => o.order_id === orderId);
     if (rowIndex === -1) throw new Error(`Order ${orderId} not found`);
-
     const sheetRow = rowIndex + 2;
 
     await sheets.spreadsheets.values.update({
       spreadsheetId: SHEET_ID,
       range: `ORDERS!L${sheetRow}:M${sheetRow}`,
       valueInputOption: 'USER_ENTERED',
-      requestBody: {
-        values: [[status, trackingNumber || '']],
-      },
+      requestBody: { values: [[status, trackingNumber || '']] },
     });
   } catch (error) {
     console.error('updateOrderStatus error:', error);
@@ -202,7 +256,7 @@ export async function updateOrderStatus(
   }
 }
 
-// ─── INVENTORY ─────────────────────────────────────────────────────────────────
+// ─── INVENTORY ───────────────────────────────────────────────────────────────
 
 export async function updateInventory(
   productId: string,
@@ -213,7 +267,6 @@ export async function updateInventory(
   try {
     const sheets = getSheetsClient();
 
-    // 1) Get current inventory from PRODUCTS sheet
     const productResponse = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
       range: 'PRODUCTS!A2:F',
@@ -227,17 +280,13 @@ export async function updateInventory(
     const newCount = Math.max(0, currentCount + quantityChange);
     const sheetRow = rowIndex + 2;
 
-    // 2) Update inventory_count column (F = col 6)
     await sheets.spreadsheets.values.update({
       spreadsheetId: SHEET_ID,
       range: `PRODUCTS!F${sheetRow}`,
       valueInputOption: 'USER_ENTERED',
-      requestBody: {
-        values: [[newCount]],
-      },
+      requestBody: { values: [[newCount]] },
     });
 
-    // 3) Append to INVENTORY_LOG
     const logId = `LOG${Date.now()}`;
     const date = new Date().toISOString().split('T')[0];
 
@@ -249,15 +298,53 @@ export async function updateInventory(
         values: [[logId, productId, changeType, quantityChange, date, reason]],
       },
     });
+
+    invalidateCache('products');
   } catch (error) {
     console.error('updateInventory error:', error);
     throw new Error('Failed to update inventory.');
   }
 }
 
-// ─── SETTINGS ──────────────────────────────────────────────────────────────────
+// ─── SUBSCRIBERS ─────────────────────────────────────────────────────────────
+
+export async function addSubscriber(email: string): Promise<void> {
+  try {
+    const sheets = getSheetsClient();
+
+    const existing = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: 'SUBSCRIBERS!A2:A',
+    });
+
+    const existingEmails = (existing.data.values || []).map((r) => r[0]?.toLowerCase().trim());
+    if (existingEmails.includes(email.toLowerCase().trim())) {
+      throw new Error('ALREADY_SUBSCRIBED');
+    }
+
+    const date = new Date().toISOString().split('T')[0];
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SHEET_ID,
+      range: 'SUBSCRIBERS!A:B',
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: [[email.toLowerCase().trim(), date]],
+      },
+    });
+  } catch (error: any) {
+    if (error?.message === 'ALREADY_SUBSCRIBED') throw error;
+    console.error('addSubscriber error:', error);
+    throw new Error('Failed to add subscriber.');
+  }
+}
+
+// ─── SETTINGS ────────────────────────────────────────────────────────────────
 
 export async function getSettings(): Promise<StoreSettings> {
+  const cached = getCache<StoreSettings>('settings');
+  if (cached) return cached;
+
   try {
     const sheets = getSheetsClient();
     const response = await sheets.spreadsheets.values.get({
@@ -271,26 +358,28 @@ export async function getSettings(): Promise<StoreSettings> {
       if (key) settingsMap[key] = value || '';
     });
 
-    return {
-      store_name: settingsMap['store_name'] || 'Aurelia Jewels',
-      store_logo_url: settingsMap['store_logo_url'] || '',
-      support_email: settingsMap['support_email'] || 'hello@aureliajewels.com',
-      instagram_url: settingsMap['instagram_url'] || 'https://instagram.com',
+    const settings: StoreSettings = {
+      store_name:      settingsMap['store_name']      || 'Aurelia Jewels',
+      store_logo_url:  settingsMap['store_logo_url']  || '',
+      support_email:   settingsMap['support_email']   || 'hello@aureliajewels.com',
+      instagram_url:   settingsMap['instagram_url']   || 'https://instagram.com',
       whatsapp_number: settingsMap['whatsapp_number'] || '',
-      tagline: settingsMap['tagline'] || 'Handcrafted with love, worn with grace.',
-      hero_image_url: settingsMap['hero_image_url'] || '',
-      hero_heading: settingsMap['hero_heading'] || 'Jewellery that tells your story',
+      tagline:         settingsMap['tagline']         || 'Handcrafted with love, worn with grace.',
+      hero_image_url:  settingsMap['hero_image_url']  || '',
+      hero_heading:    settingsMap['hero_heading']    || 'Jewellery that tells your story',
     };
+
+    setCache('settings', settings);
+    return settings;
   } catch (error) {
     console.error('getSettings error:', error);
-    // Return safe defaults if sheet fails
     return {
-      store_name: 'Aurelia Jewels',
+      store_name:     'Aurelia Jewels',
       store_logo_url: '',
-      support_email: 'hello@aureliajewels.com',
-      instagram_url: 'https://instagram.com',
-      tagline: 'Handcrafted with love, worn with grace.',
-      hero_heading: 'Jewellery that tells your story',
+      support_email:  'hello@aureliajewels.com',
+      instagram_url:  'https://instagram.com',
+      tagline:        'Handcrafted with love, worn with grace.',
+      hero_heading:   'Jewellery that tells your story',
     };
   }
 }

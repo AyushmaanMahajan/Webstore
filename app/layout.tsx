@@ -49,13 +49,13 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Jost:wght@300;400;500;600&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body className="bg-cream-50 text-charcoal-900 antialiased">
+      <body className="antialiased">
         <CartProvider>
-          <Navbar storeName={settings.store_name} />
+          <Navbar storeName={settings.store_name} logoUrl={settings.store_logo_url} />
           <main className="min-h-screen">{children}</main>
           <Footer settings={settings} />
         </CartProvider>

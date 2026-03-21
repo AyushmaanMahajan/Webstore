@@ -1,5 +1,5 @@
 'use client';
-// components/shop/ShopFilters.tsx
+
 import { useRouter, useSearchParams } from 'next/navigation';
 
 interface ShopFiltersProps {
@@ -32,11 +32,22 @@ export function ShopFilters({ categories, activeCategory }: ShopFiltersProps) {
           <button
             key={cat}
             onClick={() => handleCategory(cat)}
-            className={`px-5 py-2 text-xs tracking-widest uppercase font-sans transition-all duration-200 ${
+            className="px-5 py-2 text-xs tracking-widest uppercase font-body transition-all duration-200"
+            style={
               isActive
-                ? 'bg-charcoal-900 text-cream-50'
-                : 'border border-cream-200 text-charcoal-800/60 hover:border-charcoal-900 hover:text-charcoal-900'
-            }`}
+                ? {
+                    background: 'linear-gradient(135deg, #7A4FB8, #9B6FD4)',
+                    color: '#F0EAF8',
+                    border: '1px solid transparent',
+                    borderRadius: 8,
+                  }
+                : {
+                    background: 'transparent',
+                    color: 'var(--text-secondary)',
+                    border: '1px solid var(--glass-border)',
+                    borderRadius: 8,
+                  }
+            }
           >
             {cat}
           </button>

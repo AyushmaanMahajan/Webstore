@@ -1,16 +1,19 @@
-// app/not-found.tsx
 import Link from 'next/link';
 
 export default function NotFound() {
   return (
-    <div className="min-h-[80vh] flex flex-col items-center justify-center text-center px-4">
-      <span className="font-serif text-8xl text-cream-300 mb-6">✦</span>
-      <h1 className="font-serif text-5xl font-light text-charcoal-900 mb-3">404</h1>
-      <p className="font-serif text-2xl font-light text-charcoal-900/60 mb-6">
+    <div className="page-enter flex min-h-[80vh] flex-col items-center justify-center px-4 text-center">
+      <span className="mb-6 font-display text-8xl" style={{ color: 'var(--text-muted)' }}>
+        *
+      </span>
+      <h1 className="mb-3 font-display text-5xl font-semibold" style={{ color: 'var(--text-primary)' }}>
+        404
+      </h1>
+      <p className="mb-6 font-display text-2xl" style={{ color: 'var(--text-secondary)' }}>
         Page not found
       </p>
-      <p className="font-sans text-sm text-charcoal-800/50 mb-10 max-w-xs">
-        The page you're looking for doesn't exist or may have moved.
+      <p className="mb-10 max-w-xs text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
+        The page you&apos;re looking for doesn&apos;t exist or may have moved.
       </p>
       <Link href="/" className="btn-primary inline-block">
         Return Home

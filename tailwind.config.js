@@ -8,48 +8,33 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        cream: {
-          50: '#FDFAF5',
-          100: '#FAF4E8',
-          200: '#F5E8D0',
-          300: '#EFDAB8',
+        midnight: '#0E0A14',
+        navy: {
+          DEFAULT: '#130D1C',
+          mid: '#1A1126',
+          light: '#221630',
         },
-        gold: {
-          100: '#F5E6B8',
-          200: '#E8C96A',
-          300: '#D4A92A',
-          400: '#B8891A',
-          500: '#9A6F0E',
+        violet: {
+          DEFAULT: '#9B6FD4',
+          bright: '#B48FE8',
         },
-        charcoal: {
-          800: '#2A2420',
-          900: '#1A1510',
+        rose: {
+          brand: '#C47FA8',
+          gold: '#E8B4CF',
         },
-        blush: '#F0D5C8',
-        sage: '#C8D5C0',
+        silver: '#D4C8E8',
+        glass: 'rgba(200,170,255,0.05)',
       },
       fontFamily: {
-        serif: ['var(--font-cormorant)', 'Georgia', 'serif'],
-        sans: ['var(--font-jost)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', 'Georgia', 'serif'],
+        body: ['var(--font-body)', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-body)', 'system-ui', 'sans-serif'],
+        serif: ['var(--font-display)', 'Georgia', 'serif'],
       },
-      animation: {
-        'fade-up': 'fadeUp 0.6s ease forwards',
-        'fade-in': 'fadeIn 0.4s ease forwards',
-        shimmer: 'shimmer 2s infinite',
-      },
-      keyframes: {
-        fadeUp: {
-          from: { opacity: 0, transform: 'translateY(20px)' },
-          to: { opacity: 1, transform: 'translateY(0)' },
-        },
-        fadeIn: {
-          from: { opacity: 0 },
-          to: { opacity: 1 },
-        },
-        shimmer: {
-          '0%': { backgroundPosition: '-200% 0' },
-          '100%': { backgroundPosition: '200% 0' },
-        },
+      boxShadow: {
+        glass: '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(200,170,255,0.07)',
+        glow: '0 0 40px rgba(155, 111, 212, 0.35)',
+        'glow-rose': '0 0 40px rgba(196, 127, 168, 0.25)',
       },
     },
   },

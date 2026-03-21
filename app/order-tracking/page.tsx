@@ -2,14 +2,14 @@
 // app/order-tracking/page.tsx
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Search, Package, CheckCircle, Truck, MapPin, Clock } from 'lucide-react';
+import { Search, Package, CheckCircle, Truck, MapPin, Clock, CreditCard, Banknote } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
 
 const STATUS_STEPS = [
-  { key: 'new', label: 'Order Placed', icon: CheckCircle, description: 'We received your order' },
-  { key: 'processing', label: 'Processing', icon: Package, description: 'Being packed with care' },
-  { key: 'shipped', label: 'Shipped', icon: Truck, description: 'On its way to you' },
-  { key: 'delivered', label: 'Delivered', icon: MapPin, description: 'Delivered successfully' },
+  { key: 'new',        label: 'Order Placed',  icon: CheckCircle, description: 'We received your order' },
+  { key: 'processing', label: 'Processing',    icon: Package,     description: 'Being packed with care' },
+  { key: 'shipped',    label: 'Shipped',       icon: Truck,       description: 'On its way to you' },
+  { key: 'delivered',  label: 'Delivered',     icon: MapPin,      description: 'Delivered successfully' },
 ];
 
 const STATUS_ORDER = ['new', 'processing', 'shipped', 'delivered'];
@@ -22,164 +22,191 @@ export default function OrderTrackingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    const urlId = searchParams.get('id');
+    if (urlId) setOrderId(urlId);
+  }, [searchParams]);
+
   async function handleTrack(e?: React.FormEvent) {
     e?.preventDefault();
     if (!orderId.trim() || !email.trim()) {
-      setError('Please enter both Order ID and email address.');
+      setError('Please enter both your Order ID and email address.');
       return;
     }
-
     setLoading(true);
     setError('');
     setOrder(null);
-
     try {
       const res = await fetch(
         `/api/orders/track?id=${encodeURIComponent(orderId.trim())}&email=${encodeURIComponent(email.trim())}`
       );
       const data = await res.json();
-
       if (!res.ok) {
-        setError(data.error || 'Order not found. Please check your details.');
+        setError(data.error || 'Order not found. Please double-check your details.');
       } else {
         setOrder(data.order);
       }
     } catch {
-      setError('Unable to track order. Please try again.');
+      setError('Unable to reach the server. Please try again.');
     } finally {
       setLoading(false);
     }
   }
 
-  // Auto-fetch if order ID is in URL (from success page)
-  useEffect(() => {
-    const urlOrderId = searchParams.get('id');
-    if (urlOrderId) setOrderId(urlOrderId);
-  }, [searchParams]);
-
   const currentStatusIndex = order ? STATUS_ORDER.indexOf(order.order_status) : -1;
+  const isPaid = order?.payment_status === 'paid';
+  const isCOD = order?.notes?.toLowerCase().includes('cash on delivery');
+
 
   return (
     <div className="page-enter max-w-2xl mx-auto px-4 sm:px-6 py-10 md:py-16">
       <div className="text-center mb-10">
-        <p className="text-gold-400 text-xs tracking-[0.3em] uppercase font-sans mb-3">
+        <p className="text-xs tracking-[0.3em] uppercase font-body mb-3" style={{ color: 'var(--violet-bright)' }}>
           Where is my order?
         </p>
         <h1 className="section-title">Track Your Order</h1>
         <div className="gold-divider" />
+        <p className="font-body text-sm mt-4" style={{ color: 'var(--text-muted)' }}>
+          Enter your Order ID and the email you used at checkout.
+        </p>
       </div>
 
-      {/* Search form */}
-      <form onSubmit={handleTrack} className="bg-cream-100 p-6 mb-8 space-y-4">
+      <form onSubmit={handleTrack} className="glass-card p-6 mb-8 space-y-4">
         <div>
-          <label className="block text-xs tracking-widest uppercase font-sans text-charcoal-800/60 mb-2">
+          <label className="block text-xs tracking-widest uppercase font-body mb-2" style={{ color: 'var(--text-muted)' }}>
             Order ID
           </label>
-          <input
-            type="text"
-            value={orderId}
-            onChange={(e) => setOrderId(e.target.value)}
-            className="input-field"
-            placeholder="e.g. ORD-ABC123-XYZ"
-          />
+          <input type="text" value={orderId} onChange={(e) => setOrderId(e.target.value)}
+            className="input-field" placeholder="e.g. ORD-ABC123-XYZ" autoComplete="off" />
         </div>
         <div>
-          <label className="block text-xs tracking-widest uppercase font-sans text-charcoal-800/60 mb-2">
+          <label className="block text-xs tracking-widest uppercase font-body mb-2" style={{ color: 'var(--text-muted)' }}>
             Email Address
           </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="input-field"
-            placeholder="The email used during checkout"
-          />
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+            className="input-field" placeholder="Email used during checkout" />
         </div>
-
         {error && (
-          <p className="font-sans text-sm text-red-600">{error}</p>
+          <div className="flex items-center gap-2 p-3 rounded-lg text-sm font-body"
+            style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', color: '#FCA5A5' }}>
+            {error}
+          </div>
         )}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-60"
-        >
+        <button type="submit" disabled={loading}
+          className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
           <Search size={14} />
-          {loading ? 'Tracking…' : 'Track Order'}
+          {loading ? 'Searching…' : 'Track Order'}
         </button>
       </form>
 
-      {/* Result */}
       {order && (
-        <div className="space-y-8">
-          {/* Order details */}
-          <div className="border border-cream-200 p-6">
-            <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="space-y-6">
+          <div className="glass-card p-6">
+            <h2 className="font-display text-xl font-light mb-5" style={{ color: 'var(--text-primary)' }}>
+              Order Details
+            </h2>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4 mb-5">
+              {[
+                { label: 'Order ID',    value: order.order_id },
+                { label: 'Date',        value: order.date },
+                { label: 'Product',     value: `${order.product_name} × ${order.quantity}` },
+                { label: 'Order Total', value: formatPrice(order.total_price) },
+              ].map(({ label, value }) => (
+                <div key={label}>
+                  <p className="text-[10px] tracking-widest uppercase font-body mb-1" style={{ color: 'var(--text-muted)' }}>
+                    {label}
+                  </p>
+                  <p className="font-body text-sm" style={{ color: 'var(--text-primary)' }}>{value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Payment status */}
+            <div className="flex items-start gap-2 px-4 py-3 rounded-xl mb-4"
+              style={{
+                background: isPaid ? 'rgba(74,222,128,0.08)' : 'rgba(251,191,36,0.08)',
+                border: isPaid ? '1px solid rgba(74,222,128,0.25)' : '1px solid rgba(251,191,36,0.25)',
+              }}>
+              {isCOD
+                ? <Banknote size={15} style={{ color: isPaid ? '#4ADE80' : '#FCD34D', flexShrink: 0, marginTop: 1 }} />
+                : <CreditCard size={15} style={{ color: isPaid ? '#4ADE80' : '#FCD34D', flexShrink: 0, marginTop: 1 }} />
+              }
               <div>
-                <p className="font-sans text-[10px] tracking-widest uppercase text-charcoal-800/40 mb-1">Order ID</p>
-                <p className="font-sans text-sm font-medium text-charcoal-900">{order.order_id}</p>
-              </div>
-              <div>
-                <p className="font-sans text-[10px] tracking-widest uppercase text-charcoal-800/40 mb-1">Date</p>
-                <p className="font-sans text-sm text-charcoal-900">{order.date}</p>
-              </div>
-              <div>
-                <p className="font-sans text-[10px] tracking-widest uppercase text-charcoal-800/40 mb-1">Product</p>
-                <p className="font-sans text-sm text-charcoal-900">{order.product_name} × {order.quantity}</p>
-              </div>
-              <div>
-                <p className="font-sans text-[10px] tracking-widest uppercase text-charcoal-800/40 mb-1">Total</p>
-                <p className="font-sans text-sm font-medium text-charcoal-900">{formatPrice(order.total_price)}</p>
+                <p className="font-body text-xs font-medium" style={{ color: isPaid ? '#4ADE80' : '#FCD34D' }}>
+                  {isPaid ? 'Payment Confirmed' : isCOD ? 'Cash on Delivery — Pay at door' : 'Payment Pending'}
+                </p>
+                {isCOD && !isPaid && (
+                  <p className="font-body text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    Please keep {formatPrice(order.total_price)} ready when your order arrives.
+                  </p>
+                )}
               </div>
             </div>
 
+            {/* Tracking number */}
             {order.tracking_number && (
-              <div className="bg-gold-100/30 border border-gold-200/50 px-4 py-3">
-                <p className="font-sans text-[10px] tracking-widest uppercase text-gold-400 mb-1">Tracking Number</p>
-                <p className="font-sans text-sm font-medium text-charcoal-900">{order.tracking_number}</p>
+              <div className="px-4 py-3 rounded-xl"
+                style={{ background: 'rgba(155,111,212,0.10)', border: '1px solid rgba(155,111,212,0.25)' }}>
+                <p className="text-[10px] tracking-widest uppercase font-body mb-1" style={{ color: 'var(--violet-bright)' }}>
+                  Courier Tracking Number
+                </p>
+                <p className="font-body text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                  {order.tracking_number}
+                </p>
+                <p className="font-body text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                  Use this on your courier's website to track the shipment directly.
+                </p>
               </div>
             )}
           </div>
 
-          {/* Status timeline */}
-          <div>
-            <h2 className="font-serif text-2xl font-light text-charcoal-900 mb-6">Delivery Status</h2>
-
-            <div className="space-y-0">
+          {/* Timeline */}
+          <div className="glass-card p-6">
+            <h2 className="font-display text-xl font-light mb-6" style={{ color: 'var(--text-primary)' }}>
+              Delivery Status
+            </h2>
+            <div>
               {STATUS_STEPS.map((step, idx) => {
                 const isCompleted = idx <= currentStatusIndex;
                 const isCurrent = idx === currentStatusIndex;
+                const isLast = idx === STATUS_STEPS.length - 1;
                 const Icon = step.icon;
-
                 return (
                   <div key={step.key} className="flex gap-4">
-                    {/* Icon + line */}
                     <div className="flex flex-col items-center">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                        isCompleted
-                          ? 'bg-gold-300 text-white'
-                          : 'bg-cream-200 text-charcoal-800/30'
-                      } ${isCurrent ? 'ring-4 ring-gold-200' : ''}`}>
-                        <Icon size={18} />
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all duration-300"
+                        style={{
+                          background: isCompleted ? 'linear-gradient(135deg, #7A4FB8, #9B6FD4)' : 'rgba(155,111,212,0.08)',
+                          border: isCurrent ? '2px solid var(--violet-bright)' : isCompleted ? '2px solid transparent' : '1px solid var(--glass-border)',
+                          boxShadow: isCurrent ? '0 0 16px var(--violet-glow)' : 'none',
+                          color: isCompleted ? '#fff' : 'var(--text-muted)',
+                        }}>
+                        <Icon size={17} />
                       </div>
-                      {idx < STATUS_STEPS.length - 1 && (
-                        <div className={`w-0.5 h-10 ${isCompleted ? 'bg-gold-300' : 'bg-cream-200'}`} />
+                      {!isLast && (
+                        <div className="w-0.5 my-1" style={{
+                          minHeight: 32,
+                          background: isCompleted
+                            ? 'linear-gradient(to bottom, var(--violet), rgba(155,111,212,0.3))'
+                            : 'var(--glass-border)',
+                        }} />
                       )}
                     </div>
-
-                    {/* Content */}
-                    <div className="pb-8 pt-1.5">
-                      <p className={`font-sans text-sm font-medium ${isCompleted ? 'text-charcoal-900' : 'text-charcoal-800/30'}`}>
-                        {step.label}
+                    <div className="pb-7 pt-1.5 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-body text-sm font-medium"
+                          style={{ color: isCompleted ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                          {step.label}
+                        </p>
                         {isCurrent && (
-                          <span className="ml-2 inline-flex items-center gap-1 text-[10px] bg-gold-200 text-charcoal-900 px-2 py-0.5 rounded-full tracking-wider uppercase">
-                            <Clock size={8} />
-                            Current
+                          <span className="inline-flex items-center gap-1 text-[10px] font-body font-medium px-2 py-0.5 rounded-full"
+                            style={{ background: 'rgba(155,111,212,0.20)', color: 'var(--violet-bright)', border: '1px solid rgba(155,111,212,0.30)' }}>
+                            <Clock size={8} /> Current
                           </span>
                         )}
-                      </p>
-                      <p className={`font-sans text-xs mt-0.5 ${isCompleted ? 'text-charcoal-800/60' : 'text-charcoal-800/20'}`}>
+                      </div>
+                      <p className="font-body text-xs mt-0.5"
+                        style={{ color: isCompleted ? 'var(--text-secondary)' : 'var(--text-muted)' }}>
                         {step.description}
                       </p>
                     </div>
@@ -188,6 +215,10 @@ export default function OrderTrackingPage() {
               })}
             </div>
           </div>
+
+          <p className="font-body text-xs text-center" style={{ color: 'var(--text-muted)' }}>
+            Status and tracking number are updated by the store owner in Google Sheets.
+          </p>
         </div>
       )}
     </div>
