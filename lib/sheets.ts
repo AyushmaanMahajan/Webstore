@@ -90,7 +90,7 @@ export async function getProductsByCategory(category: string): Promise<Product[]
 
 export async function getCategories(): Promise<string[]> {
   const products = await getProducts();
-  const cats = [...new Set(products.map((p) => p.category))];
+  const cats = Array.from(new Set(products.map((p) => p.category)));
   return cats.filter(Boolean);
 }
 
